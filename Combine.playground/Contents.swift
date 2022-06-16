@@ -86,6 +86,10 @@ example(of: "Just") {
             print("Received value", $0)
     })
     
+    _ = just.sink { value in
+        print("Received value 2", value)
+    }
+    
 }
 
 // The assign(to:on:) operator enables us to assign the received value to a KVO-compliant property of an object
@@ -129,13 +133,15 @@ example(of: "assign(to:)") {
     (0..<10).publisher
         .assign(to: &object.$value)
     
-    object.value = 11
+    object.value = 100
 }
 
 
 // Subjects
 // Subjects can be seen as custom publishers, that are easier to work with.
 // we have 2 types of subjects PassthroughSubject and CurrentValueSubject
+
+
 
 // PassthroughSubject
 // PassthroughSubject will emit elements to subscribers this type of subject only passes through values meaning that it does not capture any state and will drop values if ther aren't any subscribers set
@@ -177,9 +183,10 @@ example(of: "PassthroughSubject") {
     }
     
     //Send events to see how the subscriber react
-    chatRoom.simulateNetworkError()
+    //chatRoom.simulateNetworkError()
     chatRoom.simulateMessage()
-    chatRoom.closeRoom()
+    //chatRoom.closeRoom()
+    chatRoom.subject.send("iOS Bootcamp")
 }
 
 //CurrentValueSubject
@@ -188,13 +195,14 @@ example(of: "PassthroughSubject") {
 example(of: "CurrentValueSubject") {
     struct Uploader {
         enum State {
-            case pending, uploading, finished
+            case pending, uploading, terminated
         }
         
         enum Error: Swift.Error {
             case uploadFailed
         }
         
+        //Subject == Custom Publisher
         let subject = CurrentValueSubject<State, Error>(.pending)
         
         func startUpload() {
@@ -202,7 +210,7 @@ example(of: "CurrentValueSubject") {
         }
         
         func finishUpload() {
-            subject.value = .finished
+            subject.value = .terminated
             subject.send(completion: .finished)
         }
         
@@ -224,12 +232,86 @@ example(of: "CurrentValueSubject") {
         print("Received message: \(message)")
     }
     
-    uploader.startUpload()
-    uploader.finishUpload()
+//    uploader.startUpload()
+//    uploader.finishUpload()
     
     uploader.failUpload()
 }
 
+// Operators
+// Operators will let you update the information inside of the stream before it gets into the subscriber
+
+//We have 5 type of operators:
+// - Transforming operators: Use this operators to manipulate the values of the publishers to the way the subscribers need them.
+// - Filtering operators: This operators will let you limit the number of values or events emited by the publisher.
+// - Combining operators: This operators will let you as it name says combine values from different publishers so you can do very powerful stuff with them.
+// - Time manipulation operators:
+// - Sequence operators: will let you manage the values of the publishers when the publisher is sending a lot of values
+
+
+// Transforming operators:
+
+example(of: "Map operator") {
+    
+    class MapOperator {
+        @Published var message = "Example"
+    }
+    
+    let mapOperator = MapOperator()
+    
+    mapOperator.$message.sink { value in
+        print(value)
+    }
+    
+    mapOperator
+        .$message
+        .map { "This is an \($0)" }
+        .sink { message in
+        print(message)
+    }
+    
+    mapOperator.message = "example 2"
+}
+
+// Filtering operators
+example(of: "filter") {
+  // 1
+  let numbers = (1...10).publisher
+  
+  // 2
+  numbers
+    .filter { $0.isMultiple(of: 3) }
+    .sink(receiveValue: { n in
+      print("\(n) is a multiple of 3!")
+    })
+   
+}
+
+// Combining operators
+example(of: "append(Output...)") {
+  // 1
+  let publisher = [1].publisher
+
+  // 2
+  publisher
+    .append(2, 3)
+    .append(4)
+    .sink(receiveValue: {
+        print($0) })
+}
+
+// Sequence operators
+
+example(of: "min") {
+  // 1
+  let publisher = [1, -50, 246, 0].publisher
+
+  // 2
+  publisher
+    .print("publisher")
+    .min()
+    .sink(receiveValue: { print("Lowest value is \($0)") })
+}
 
 
 
